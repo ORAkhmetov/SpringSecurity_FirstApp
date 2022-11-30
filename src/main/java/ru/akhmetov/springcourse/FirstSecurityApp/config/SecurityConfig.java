@@ -1,25 +1,80 @@
 package ru.akhmetov.springcourse.FirstSecurityApp.config;
 
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfiguration;
-import ru.akhmetov.springcourse.FirstSecurityApp.security.AuthProviderImpl;
+import org.springframework.security.crypto.password.NoOpPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import ru.akhmetov.springcourse.FirstSecurityApp.services.PersonDetailsService;
+
+import static org.springframework.security.config.Customizer.withDefaults;
 
 /**
  * @author Oleg Akhmetov on 28.11.2022
  */
-@EnableWebSecurity
-public class SecurityConfig extends WebSecurityConfiguration {
 
-    private final AuthProviderImpl authProvider;
+//@EnableWebSecurity
+@Configuration
+//@EnableWebSecurity
+//@EnableGlobalMethdSecurity(prePostEnabled = true, securedEnabled = true, jsr250Enabled = true)
+public class SecurityConfig {
 
-    public SecurityConfig(AuthProviderImpl authProvider) {
-        this.authProvider = authProvider;
+    private final PersonDetailsService personDetailsService;
+
+
+    @Autowired
+    public SecurityConfig(PersonDetailsService personDetailsService)  {
+        this.personDetailsService = personDetailsService;
     }
 
 
-    //Настраивает аутентификацию
-    protected void configure(AuthenticationManagerBuilder auth) {
-        auth.authenticationProvider(authProvider);
+    @Bean
+    protected SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http.csrf().disable()
+                .authorizeHttpRequests()
+                .requestMatchers("/auth/login", "/auth/registration", "/error").permitAll()
+                .anyRequest().authenticated()
+                .and()
+                .formLogin().loginPage("/auth/login")
+                .loginProcessingUrl("/process_login")
+                .defaultSuccessUrl("/hello", true)
+                .failureUrl("/auth/login?error");
+        return http.build();
     }
+    @Bean
+    public PasswordEncoder getPasswordEncoder() {
+        return NoOpPasswordEncoder.getInstance();
+    }
+
+//protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+//   auth.userDetailsService(personDetailsService).passwordEncoder(NoOpPasswordEncoder.getInstance());
+//}
+/*
+@Bean
+public AuthenticationProvider authenticationProvider() {
+    DaoAuthenticationProvider provider =new DaoAuthenticationProvider();
+    provider.setUserDetailsService(personDetailsService);
+    provider.setPasswordEncoder(NoOpPasswordEncoder.getInstance());
+    return provider;
+}
+*/
+
+/*@Bean
+public AuthenticationManager authManager(HttpSecurity http, PersonDetailsService personDetailsService)
+        throws Exception {
+    return http.getSharedObject(AuthenticationManagerBuilder.class)
+            .userDetailsService(personDetailsService)
+            .passwordEncoder(NoOpPasswordEncoder.getInstance())
+            .and()
+            .build();
+}*/
+
+
+
+
 }
